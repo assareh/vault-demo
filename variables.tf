@@ -1,5 +1,6 @@
 variable "prefix" {
   description = "This prefix will be included in the name of most resources."
+  default = "vault-eaas-demo"
 }
 
 variable "region" {
@@ -19,7 +20,7 @@ variable "subnet_prefix" {
 
 variable "instance_type" {
   description = "Specifies the AWS instance type."
-  default     = "t2.small"
+  default     = "t2.micro"
 }
 
 variable "owner" {
