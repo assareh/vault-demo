@@ -38,8 +38,8 @@ resource aws_security_group "hashicat" {
   }
 
   ingress {
-    from_port   = 80
-    to_port     = 80
+    from_port   = 5000
+    to_port     = 5000
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -159,24 +159,20 @@ resource "null_resource" "configure-cat-app" {
       host        = aws_eip.hashicat.public_ip
     }
   }
-# i can move some of this to a standalone script copied over using file provisioner
+
   provisioner "remote-exec" {
     inline = [
+      "git clone https://github.com/assareh/transit-app-example.git",
       "sudo apt -y update",
-      "sudo apt -y install docker.io unzip python3-pip",
+      "sudo apt -y install docker.io",
+      "sudo docker pull hashicorp/vault-enterprise:1.4.0_ent",
       "sudo docker pull mysql/mysql-server:5.7.21",
       "mkdir ~/mysql-data",
       "sudo docker run --name mysql -p 3306:3306 -v ~/mysql-data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=root -e MYSQL_ROOT_HOST=% -e MYSQL_DATABASE=my_app -e MYSQL_USER=vault -e MYSQL_PASSWORD=vaultpw -d mysql/mysql-server:5.7.21",
-      "git clone https://github.com/assareh/transit-app-example.git",
-      "curl -O https://releases.hashicorp.com/vault/1.4.0+ent/vault_1.4.0+ent_linux_amd64.zip && unzip vault_1.4.0+ent_linux_amd64.zip",
-      "sudo mv vault /usr/local/bin/",
-      "vault server -dev -dev-root-token-id=root &",
-      "export VAULT_ADDR=http://localhost:8200",
-      "export VAULT_TOKEN=root",
-      "vault audit enable file file_path=/tmp/vault_audit.log",
-      "vault secrets enable -path=lob_a/workshop/database database",
-      "pip3 install Flask mysql-connector-python hvac",
-      "cd ~/transit-app-example/backend && python3 app.py &",
+      "sudo docker run --name vault -p 8200:8200 --cap-add=IPC_LOCK -d -e 'VAULT_DEV_ROOT_TOKEN_ID=root' -e 'VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200' hashicorp/vault-enterprise:1.4.0_ent",
+      "chmod +x *.sh && ./edit_config.sh",
+      "cd transit-app-example/backend && sudo docker build -t transit-app-example .",
+      "sudo docker run --name transit-app-example -p 5000:5000 -d transit-app-example:latest",
     ]
 
     connection {
@@ -202,10 +198,9 @@ resource aws_key_pair "hashicat" {
 }
 
 output "public_dns" {
-  value = "http://${aws_eip.hashicat.public_dns}"
+  value = "http://${aws_eip.hashicat.public_dns}:5000"
 }
 
-# how to save this to a file
-output "private_key" {
-  value = "${tls_private_key.hashicat.private_key_pem}"
-}
+# output "private_key" {
+#   value = "${tls_private_key.hashicat.private_key_pem}"
+# }

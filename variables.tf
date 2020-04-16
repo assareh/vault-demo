@@ -22,11 +22,6 @@ variable "instance_type" {
   default     = "t2.small"
 }
 
-variable "admin_username" {
-  description = "Administrator user name for mysql"
-  default     = "hashicorp"
-}
-
 variable "owner" {
   description = "owner to pass to owner tag"
   default     = "Andy Assareh"
@@ -35,8 +30,4 @@ variable "owner" {
 variable "ttl" {
   description = "Hours until instances are reaped by N.E.P.T.R"
   default     = "1"
-}
-
-variable "key_pair_name" {
-  description = "The key name of the Key Pair to use for the instance"
 }
