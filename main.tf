@@ -202,6 +202,6 @@ output "public_dns" {
   value = "http://${aws_eip.hashicat.public_dns}:5000"
 }
 
-# output "private_key" {
-#   value = "${tls_private_key.hashicat.private_key_pem}"
-# }
+output "private_key" {
+  value = "${tls_private_key.hashicat.private_key_pem}"
+}
