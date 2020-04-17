@@ -1,6 +1,20 @@
 #!/bin/bash
 # Script to configure Vault
 
+#Utils
+sudo apt-get install unzip
+
+#Download Vault
+VAULT_VERSION="1.4.0"
+curl --silent --remote-name https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip
+
+#Install Vault
+unzip vault_${VAULT_VERSION}_linux_amd64.zip
+sudo chown root:root vault
+sudo mv vault /usr/local/bin/
+vault -autocomplete-install
+complete -C /usr/local/bin/vault vault
+
 ADDRESS=$(ifconfig eth0 | grep -E -o "(25[0-4]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-4]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-4]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-4]|2[0-4][0-9]|[01]?[0-9][0-9]?)" | head -n 1)
 
 export VAULT_ADDR=http://$ADDRESS:8200
