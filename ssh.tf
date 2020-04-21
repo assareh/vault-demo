@@ -1,6 +1,6 @@
 resource "null_resource" "key" {
   provisioner "local-exec" {
-    command = "echo \"${tls_private_key.hashicat.private_key_pem}\" > ${aws_key_pair.hashicat.key_name}"
+    command = "echo \"${tls_private_key.demo.private_key_pem}\" > ${aws_key_pair.demo.key_name}"
   }
 
   provisioner "local-exec" {

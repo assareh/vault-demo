@@ -7,7 +7,7 @@ provider "aws" {
   region  = var.region
 }
 
-resource aws_vpc "hashicat" {
+resource aws_vpc "demo" {
   cidr_block           = var.address_space
   enable_dns_hostnames = true
 
@@ -16,8 +16,8 @@ resource aws_vpc "hashicat" {
   }
 }
 
-resource aws_subnet "hashicat" {
-  vpc_id     = aws_vpc.hashicat.id
+resource aws_subnet "demo" {
+  vpc_id     = aws_vpc.demo.id
   cidr_block = var.subnet_prefix
 
   tags = {
@@ -25,10 +25,10 @@ resource aws_subnet "hashicat" {
   }
 }
 
-resource aws_security_group "hashicat" {
+resource aws_security_group "demo" {
   name = "${var.prefix}-security-group"
 
-  vpc_id = aws_vpc.hashicat.id
+  vpc_id = aws_vpc.demo.id
 
   ingress {
     from_port   = 22
@@ -64,26 +64,26 @@ resource aws_security_group "hashicat" {
   }
 }
 
-resource aws_internet_gateway "hashicat" {
-  vpc_id = aws_vpc.hashicat.id
+resource aws_internet_gateway "demo" {
+  vpc_id = aws_vpc.demo.id
 
   tags = {
     Name = "${var.prefix}-internet-gateway"
   }
 }
 
-resource aws_route_table "hashicat" {
-  vpc_id = aws_vpc.hashicat.id
+resource aws_route_table "demo" {
+  vpc_id = aws_vpc.demo.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.hashicat.id
+    gateway_id = aws_internet_gateway.demo.id
   }
 }
 
-resource aws_route_table_association "hashicat" {
-  subnet_id      = aws_subnet.hashicat.id
-  route_table_id = aws_route_table.hashicat.id
+resource aws_route_table_association "demo" {
+  subnet_id      = aws_subnet.demo.id
+  route_table_id = aws_route_table.demo.id
 }
 
 data aws_ami "ubuntu" {
@@ -103,46 +103,39 @@ data aws_ami "ubuntu" {
   owners = ["099720109477"] # Canonical
 }
 
-resource "aws_eip" "hashicat" {
-  instance = aws_instance.hashicat.id
+resource "aws_eip" "demo" {
+  instance = aws_instance.demo.id
   vpc      = true
 }
 
-resource "aws_eip_association" "hashicat" {
-  instance_id   = aws_instance.hashicat.id
-  allocation_id = aws_eip.hashicat.id
+resource "aws_eip_association" "demo" {
+  instance_id   = aws_instance.demo.id
+  allocation_id = aws_eip.demo.id
 }
 
-resource aws_instance "hashicat" {
+resource aws_instance "demo" {
   ami                         = data.aws_ami.ubuntu.id
   instance_type               = var.instance_type
-  key_name                    = aws_key_pair.hashicat.key_name
+  key_name                    = aws_key_pair.demo.key_name
   associate_public_ip_address = true
-  subnet_id                   = aws_subnet.hashicat.id
-  vpc_security_group_ids      = [aws_security_group.hashicat.id]
+  subnet_id                   = aws_subnet.demo.id
+  vpc_security_group_ids      = [aws_security_group.demo.id]
 
   tags = {
-    Name = "${var.prefix}-hashicat-instance"
+    Name = "${var.prefix}-demo-instance"
     ttl         = var.ttl
     owner       = var.owner
 
   }
 }
 
-# We're using a little trick here so we can run the provisioner without
-# destroying the VM. Do not do this in production.
-
-# If you need ongoing management (Day N) of your virtual machines a tool such
-# as Chef or Puppet is a better choice. These tools track the state of
-# individual files and can keep them in the correct configuration.
-
 # Here we do the following steps:
 # Sync everything in files/ to the remote VM.
 # Set up some environment variables for our script.
 # Add execute permissions to our scripts.
 # Run the deploy_app.sh script.
-resource "null_resource" "configure-cat-app" {
-  depends_on = [aws_eip_association.hashicat]
+resource "null_resource" "configure-demo" {
+  depends_on = [aws_eip_association.demo]
 
   provisioner "file" {
     source      = "files/"
@@ -151,8 +144,8 @@ resource "null_resource" "configure-cat-app" {
     connection {
       type        = "ssh"
       user        = "ubuntu"
-      private_key = tls_private_key.hashicat.private_key_pem
-      host        = aws_eip.hashicat.public_ip
+      private_key = tls_private_key.demo.private_key_pem
+      host        = aws_eip.demo.public_ip
     }
   }
 
@@ -164,24 +157,24 @@ resource "null_resource" "configure-cat-app" {
       "sudo docker pull hashicorp/vault-enterprise:1.4.0_ent",
       "sudo docker pull mysql/mysql-server:5.7.21",
       "mkdir ~/mysql-data",
-      "sudo docker run --name mysql -p 3306:3306 -v ~/mysql-data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=root -e MYSQL_ROOT_HOST=% -e MYSQL_DATABASE=my_app -e MYSQL_USER=vault -e MYSQL_PASSWORD=vaultpw -d mysql/mysql-server:5.7.21",
-      "sudo docker run --name vault -p 8200:8200 --cap-add=IPC_LOCK -d -e 'VAULT_DEV_ROOT_TOKEN_ID=root' -e 'VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200' hashicorp/vault-enterprise:1.4.0_ent",
+      "sudo docker run --restart=always --name mysql -p 3306:3306 -v ~/mysql-data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=root -e MYSQL_ROOT_HOST=% -e MYSQL_DATABASE=my_app -e MYSQL_USER=vault -e MYSQL_PASSWORD=vaultpw -d mysql/mysql-server:5.7.21",
+      "sudo docker run --restart=always --name vault -p 8200:8200 --cap-add=IPC_LOCK -d -e 'VAULT_DEV_ROOT_TOKEN_ID=root' -e 'VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200' hashicorp/vault-enterprise:1.4.0_ent",
       "chmod +x *.sh && ./edit_config.sh",
       "./configure_vault.sh",
       "cd transit-app-example/backend && sudo docker build -t transit-app-example .",
-      "sudo docker run --name transit-app-example -p 5000:5000 -d transit-app-example:latest",
+      "sudo docker run --restart=always --name transit-app-example -p 5000:5000 -d transit-app-example:latest",
     ]
 
     connection {
       type        = "ssh"
       user        = "ubuntu"
-      private_key = tls_private_key.hashicat.private_key_pem
-      host        = aws_eip.hashicat.public_ip
+      private_key = tls_private_key.demo.private_key_pem
+      host        = aws_eip.demo.public_ip
     }
   }
 }
 
-resource tls_private_key "hashicat" {
+resource tls_private_key "demo" {
   algorithm = "RSA"
 }
 
@@ -189,15 +182,15 @@ locals {
   private_key_filename = "${var.prefix}-ssh-key.pem"
 }
 
-resource aws_key_pair "hashicat" {
+resource aws_key_pair "demo" {
   key_name   = local.private_key_filename
-  public_key = tls_private_key.hashicat.public_key_openssh
+  public_key = tls_private_key.demo.public_key_openssh
 }
 
 output "public_dns" {
-  value = "http://${aws_eip.hashicat.public_dns}:5000"
+  value = "http://${aws_eip.demo.public_dns}:5000"
 }
 
 output "private_key" {
-  value = "${tls_private_key.hashicat.private_key_pem}"
+  value = "${tls_private_key.demo.private_key_pem}"
 }

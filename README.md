@@ -8,3 +8,4 @@ terraform init
 terraform plan
 terraform apply
 ```
+Please be patient, it does take a little while to configure!
