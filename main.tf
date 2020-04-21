@@ -154,15 +154,15 @@ resource "null_resource" "configure-demo" {
       "git clone https://github.com/assareh/transit-app-example.git",
       "sudo apt -y update",
       "sudo apt -y install docker.io",
-      "sudo docker pull assareh/transit-app-example",
       "sudo docker pull hashicorp/vault-enterprise:1.4.0_ent",
       "sudo docker pull mysql/mysql-server:5.7.21",
       "mkdir ~/mysql-data",
       "sudo docker run --restart=always --name mysql -p 3306:3306 -v ~/mysql-data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=root -e MYSQL_ROOT_HOST=% -e MYSQL_DATABASE=my_app -e MYSQL_USER=vault -e MYSQL_PASSWORD=vaultpw -d mysql/mysql-server:5.7.21",
       "sudo docker run --restart=always --name vault -p 8200:8200 --cap-add=IPC_LOCK -d -e 'VAULT_DEV_ROOT_TOKEN_ID=root' -e 'VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200' hashicorp/vault-enterprise:1.4.0_ent",
-      "sudo docker run --restart=always --name transit-app-example -p 5000:5000 -d assareh/transit-app-example",
       "chmod +x *.sh && ./edit_config.sh",
       "./configure_vault.sh",
+      "cd transit-app-example/backend && sudo docker build -t transit-app-example .",
+      "sudo docker run --restart=always --name transit-app-example -p 5000:5000 -d transit-app-example:latest",
     ]
 
     connection {
